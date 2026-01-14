@@ -94,6 +94,9 @@ app.post('/api/echo', (req, res) => {
 });
 
 
+app.use('/api/auth', authRoutes);
+
+
 
 
 // =============================================
@@ -127,7 +130,7 @@ app.use((err, req, res, next) => {
 
 
 
-app.use('/api/auth', authRoutes);
+
 
 
 // =============================================
