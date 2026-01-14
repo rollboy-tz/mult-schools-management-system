@@ -82,8 +82,7 @@ app.get('/api/test', (req, res) => {
 // =============================================
 // 4. TODO: USER MANAGEMENT ROUTES (PHASE 1)
 // =============================================
-// Hapa tutaweka routes za user management
-// We'll create these step by step
+import authRoutes from './routes/auth.routes.js';
 
 // Temporary: Echo route for testing
 app.post('/api/echo', (req, res) => {
@@ -95,11 +94,7 @@ app.post('/api/echo', (req, res) => {
 });
 
 
-// =============================================
-// 4. TODO: USER MANAGEMENT ROUTES (PHASE 1)
-// =============================================
 
-import authRoutes from './routes/auth.routes.js';
 
 // =============================================
 // 5. ERROR HANDLING
