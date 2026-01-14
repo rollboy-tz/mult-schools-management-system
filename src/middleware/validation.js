@@ -1,4 +1,3 @@
-// src/middleware/validation.js
 import { body, validationResult } from 'express-validator';
 
 export const validateUserRegistration = [

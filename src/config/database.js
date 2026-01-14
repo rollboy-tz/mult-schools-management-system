@@ -47,9 +47,27 @@ const checkAndCreateTables = async () => {
 };
 
 const createInitialTables = async () => {
-  // We'll add table creation here step by step
-  console.log('Creating tables... (Phase 1: User Management)');
-  // We'll implement this in next step
+  try {
+    // Create platform_users table
+    await pool.query(`
+      CREATE TABLE platform_users (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        user_type VARCHAR(20) DEFAULT 'school_admin',
+        full_name VARCHAR(255),
+        phone_number VARCHAR(20),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        last_login TIMESTAMP,
+        updated_at TIMESTAMP,
+        is_active BOOLEAN DEFAULT TRUE
+      )
+    `);
+    
+    console.log('✅ Created platform_users table');
+  } catch (error) {
+    console.error('Error creating tables:', error);
+  }
 };
 
 export { pool };

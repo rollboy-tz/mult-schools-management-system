@@ -1,4 +1,3 @@
-// src/controllers/auth.controller.js
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { pool } from '../config/database.js';
@@ -76,7 +75,7 @@ export const loginUser = async (req, res) => {
     
     // Tafuta mtumiaji
     const result = await pool.query(
-      `SELECT id, email, password_hash, full_name, user_type, is_active 
+      `SELECT id, email, password_hash, full_name, user_type, is_active, phone_number, last_login
        FROM platform_users 
        WHERE email = $1`,
       [email]
@@ -134,7 +133,9 @@ export const loginUser = async (req, res) => {
           id: user.id,
           email: user.email,
           full_name: user.full_name,
-          user_type: user.user_type
+          user_type: user.user_type,
+          phone_number: user.phone_number,
+          last_login: user.last_login
         },
         token
       }
@@ -151,15 +152,122 @@ export const loginUser = async (req, res) => {
 
 export const getCurrentUser = async (req, res) => {
   try {
-    // Hii itafanyika baada ya kuweka middleware ya authentication
+    // req.user is set by authenticate middleware
+    const user = req.user;
+    
+    // Remove sensitive data
+    const userData = {
+      id: user.id,
+      email: user.email,
+      full_name: user.full_name,
+      user_type: user.user_type,
+      phone_number: user.phone_number,
+      last_login: user.last_login
+    };
+    
     res.status(200).json({
       status: 'success',
-      message: 'Endpoint ya wasifu ya mtumiaji (itafanyiwa kazi baadaye)'
+      message: 'Wasifu wa mtumiaji ulipatikana',
+      data: { user: userData }
     });
+    
   } catch (error) {
+    console.error('Get user error:', error);
     res.status(500).json({
       status: 'error',
-      message: 'Kosa la ndani la seva'
+      message: 'Hitilafu ya ndani ya seva'
+    });
+  }
+};
+
+export const updateProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { full_name, phone_number } = req.body;
+    
+    // Update user profile
+    const result = await pool.query(
+      `UPDATE platform_users 
+       SET full_name = COALESCE($1, full_name), 
+           phone_number = COALESCE($2, phone_number),
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $3 
+       RETURNING id, email, full_name, phone_number, user_type, updated_at`,
+      [full_name, phone_number, userId]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Mtumiaji huyu hayupo'
+      });
+    }
+    
+    res.status(200).json({
+      status: 'success',
+      message: 'Wasifu umehakikiwa',
+      data: { user: result.rows[0] }
+    });
+    
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Hitilafu ya ndani ya seva'
+    });
+  }
+};
+
+export const changePassword = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { current_password, new_password } = req.body;
+    
+    // Get current password hash
+    const userResult = await pool.query(
+      'SELECT password_hash FROM platform_users WHERE id = $1',
+      [userId]
+    );
+    
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Mtumiaji huyu hayupo'
+      });
+    }
+    
+    const currentHashedPassword = userResult.rows[0].password_hash;
+    
+    // Verify current password
+    const isValid = await bcrypt.compare(current_password, currentHashedPassword);
+    
+    if (!isValid) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Nenosiri la sasa si sahihi'
+      });
+    }
+    
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    const newHashedPassword = await bcrypt.hash(new_password, salt);
+    
+    // Update password
+    await pool.query(
+      'UPDATE platform_users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      [newHashedPassword, userId]
+    );
+    
+    res.status(200).json({
+      status: 'success',
+      message: 'Nenosiri limebadilishwa kikamilifu'
+    });
+    
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Hitilafu ya ndani ya seva'
     });
   }
 };
