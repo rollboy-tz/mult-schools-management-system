@@ -94,6 +94,13 @@ app.post('/api/echo', (req, res) => {
   });
 });
 
+
+// =============================================
+// 4. TODO: USER MANAGEMENT ROUTES (PHASE 1)
+// =============================================
+
+import authRoutes from './routes/auth.routes.js';
+
 // =============================================
 // 5. ERROR HANDLING
 // =============================================
@@ -122,6 +129,11 @@ app.use((err, req, res, next) => {
     ...(process.env.NODE_ENV !== 'production' && { stack: err.stack })
   });
 });
+
+
+
+app.use('/api/auth', authRoutes);
+
 
 // =============================================
 // 6. SERVER STARTUP
