@@ -17,7 +17,7 @@ const router = express.Router();
 
 // ========= PUBLIC ROUTES =========
 // @route   POST /api/auth/register
-// @desc    Sajili mtumiaji mpya
+// @desc    Register new user
 // @access  Public
 router.post('/register', validateUserRegistration, registerUser);
 
