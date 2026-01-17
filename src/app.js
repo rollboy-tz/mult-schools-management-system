@@ -17,7 +17,7 @@ import { connectDB } from './config/database.js';
 // Routes
 import authRoutes from './routes/auth.routes.js';
 import testRoutes from './routes/test.routes.js';
-import schoolRoutes from './routes/school.routes.js';
+//import schoolRoutes from './routes/school.routes.js';
 
 // Initialize Express app
 const app = express();
