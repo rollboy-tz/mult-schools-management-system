@@ -9,6 +9,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import axios from 'axios';
 
 // Database connection
 import { connectDB } from './config/database.js';
@@ -59,22 +60,55 @@ connectDB().catch(err => {
     console.error('❌ Database connection failed:', err);
 });
 
+const PYTHON_API = 'https://eduasas-python.onrender.com'
 // =============================================
 // 3. ROUTES
 // =============================================
 
 // Health Check Route
 app.get('/api/health', (req, res) => {
-    res.status(200).json({
-        status: 'healthy',
-        message: 'EduSaaS API is running on Render',
-        timestamp: new Date().toISOString(),
-        environment: process.env.NODE_ENV || 'production',
-        service: 'User Management System',
-        version: '1.0.0',
-        deploy_url: 'https://edusaas-api.onrender.com'
-    });
+    try {
+        // 1. Mama binafsi anajicheki
+        const mamaHealth = {
+            status: 'healthy',
+            service: 'Express Server (Mama)',
+            timestamp: new Date().toISOString(),
+            uptime: process.uptime()
+        };
+
+        // 2. Mama anamuuliza mtoto wake (Python API)
+        let mtotoHealth = null;
+        try {
+            const response = await axios.get(`${PYTHON_API}/health`, {
+                timeout: 5000 // 5 seconds timeout
+            });
+            mtotoHealth = response.data;
+        } catch (mtotoError) {
+            mtotoHealth = {
+                status: 'unreachable',
+                error: mtotoError.message,
+                python_api: PYTHON_API
+            };
+        }
+
+        // 3. Mama anarudisha majibu yote kwa pamoja
+        res.json({
+            success: true,
+            mama: mamaHealth,
+            mtoto: mtotoHealth,
+            family_status: mtotoHealth.status === 'healthy' ? 'all_healthy' : 'child_unhealthy',
+            message: 'Family health check completed'
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: 'Family health check failed',
+            details: error.message
+        });
+    }
 });
+
 
 // Root endpoint for Render health checks
 app.get('/', (req, res) => {
