@@ -60,7 +60,9 @@ connectDB().catch(err => {
     console.error('❌ Database connection failed:', err);
 });
 
+// Load the Python API url
 const PYTHON_API = process.env.PYTHON_API
+
 // =============================================
 // 3. ROUTES
 // =============================================
@@ -92,7 +94,7 @@ app.get('/api/health', async (req, res) => {
             };
         }
 
-        // 3. Mama anarudisha majibu yote kwa pamoja
+        // 3. Main server return health status
         res.json({
             success: true,
             mainServer: mainServer,
