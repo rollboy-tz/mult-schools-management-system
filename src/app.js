@@ -95,8 +95,8 @@ app.get('/api/health', async (req, res) => {
         // 3. Mama anarudisha majibu yote kwa pamoja
         res.json({
             success: true,
-            main: mainServer,
-            second: secondServerHealth,
+            mainServer: mainServer,
+            secondServer: secondServerHealth,
             family_status: secondServerHealth.status === 'healthy' ? 'all_healthy' : 'child_unhealthy',
             message: 'Family health check completed'
         });
