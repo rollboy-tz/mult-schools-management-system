@@ -70,8 +70,9 @@ app.get('/api/health', async (req, res) => {
     try {
         // 1. Mama binafsi anajicheki
         const mamaHealth = {
-            status: 'healthy',
-            service: 'Express Server (Mama)',
+            status: 'alive',
+            service: 'Express main server',
+            runtime: 'Node JS'
             timestamp: new Date().toISOString(),
             uptime: process.uptime()
         };
