@@ -60,7 +60,7 @@ connectDB().catch(err => {
     console.error('❌ Database connection failed:', err);
 });
 
-const PYTHON_API = 'process.env.PYTHON_API'
+const PYTHON_API = process.env.PYTHON_API
 // =============================================
 // 3. ROUTES
 // =============================================
