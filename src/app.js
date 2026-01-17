@@ -60,7 +60,7 @@ connectDB().catch(err => {
     console.error('❌ Database connection failed:', err);
 });
 
-const PYTHON_API = 'https://eduasas-python.onrender.com'
+const PYTHON_API = 'process.env.PYTHON_API'
 // =============================================
 // 3. ROUTES
 // =============================================
