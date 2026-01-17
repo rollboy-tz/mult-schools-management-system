@@ -68,7 +68,7 @@ const PYTHON_API = 'https://eduasas-python.onrender.com'
 // Health Check Route
 app.get('/api/health', async (req, res) => {
     try {
-        // 1. Main services Health check
+        // 1. Main services Health check 
         const mainServer = {
             status: 'alive',
             service: 'Express main server',
