@@ -122,7 +122,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/test', testRoutes);
 
 // School Routes
-app.use('/api/schools', schoolRoutes);
+//app.use('/api/schools', schoolRoutes);
 
 // =============================================
 // 4. ERROR HANDLING
