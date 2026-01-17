@@ -69,7 +69,7 @@ const PYTHON_API = 'https://eduasas-python.onrender.com'
 app.get('/api/health', async (req, res) => {
     try {
         // 1. Main services Health check
-        const mamaHealth = {
+        const mainServer = {
             status: 'alive',
             service: 'Express main server',
             runtime: 'Node JS'
@@ -95,8 +95,8 @@ app.get('/api/health', async (req, res) => {
         // 3. Mama anarudisha majibu yote kwa pamoja
         res.json({
             success: true,
-            mama: mamaHealth,
-            mtoto: secondServerHealth,
+            main: mainServer,
+            second: secondServerHealth,
             family_status: secondServerHealth.status === 'healthy' ? 'all_healthy' : 'child_unhealthy',
             message: 'Family health check completed'
         });
