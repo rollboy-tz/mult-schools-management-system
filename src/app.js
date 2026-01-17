@@ -68,7 +68,7 @@ const PYTHON_API = 'https://eduasas-python.onrender.com'
 // Health Check Route
 app.get('/api/health', async (req, res) => {
     try {
-        // 1. Mama binafsi anajicheki
+        // 1. Main services Health check
         const mamaHealth = {
             status: 'alive',
             service: 'Express main server',
@@ -77,17 +77,17 @@ app.get('/api/health', async (req, res) => {
             uptime: process.uptime()
         };
 
-        // 2. Mama anamuuliza mtoto wake (Python API)
-        let mtotoHealth = null;
+        // 2. Second server Health check (Python API)
+        let secondServerHealth = null;
         try {
             const response = await axios.get(`${PYTHON_API}/health`, {
                 timeout: 5000 // 5 seconds timeout
             });
-            mtotoHealth = response.data;
-        } catch (mtotoError) {
-            mtotoHealth = {
+            secondServerHealth = response.data;
+        } catch (pyServerErr) {
+            secondServerHealth = {
                 status: 'unreachable',
-                error: mtotoError.message,
+                error: pyServerErr.message,
                 python_api: PYTHON_API
             };
         }
@@ -96,8 +96,8 @@ app.get('/api/health', async (req, res) => {
         res.json({
             success: true,
             mama: mamaHealth,
-            mtoto: mtotoHealth,
-            family_status: mtotoHealth.status === 'healthy' ? 'all_healthy' : 'child_unhealthy',
+            mtoto: secondServerHealth,
+            family_status: secondServerHealth.status === 'healthy' ? 'all_healthy' : 'child_unhealthy',
             message: 'Family health check completed'
         });
 
