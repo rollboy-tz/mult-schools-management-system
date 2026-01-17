@@ -66,7 +66,7 @@ const PYTHON_API = 'https://eduasas-python.onrender.com'
 // =============================================
 
 // Health Check Route
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
     try {
         // 1. Mama binafsi anajicheki
         const mamaHealth = {
