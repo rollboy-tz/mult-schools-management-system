@@ -72,7 +72,7 @@ app.get('/api/health', async (req, res) => {
         const mainServer = {
             status: 'alive',
             service: 'Express main server',
-            runtime: 'Node JS'
+            runtime: 'Node JS',
             timestamp: new Date().toISOString(),
             uptime: process.uptime()
         };
