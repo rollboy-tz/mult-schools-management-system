@@ -72,6 +72,7 @@ export const registerUser = async (req, res) => {
 export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
+    const { redirect: redirectParam } = req.query; // Get redirect from query params
     
     // Tafuta mtumiaji
     const result = await pool.query(
@@ -114,6 +115,34 @@ export const loginUser = async (req, res) => {
       [user.id]
     );
     
+    // ========== REDIRECT LOGIC ==========
+    let redirectDestination = '/dashboard';
+    
+    if (redirectParam) {
+      // Kuna redirect parameter - tumia ile aliyoomba
+      const cleanPath = redirectParam.split('?')[0].split('#')[0];
+      redirectDestination = cleanPath;
+    } else {
+      // Hakuna redirect parameter - tumia PRIMARY ROLE (kazi kuu)
+      switch(user.user_type) {
+        case 'school_admin':
+          redirectDestination = '/admin/dashboard';
+          break;
+        case 'teacher':
+          redirectDestination = '/teacher/dashboard'; // ROLE KUBWA ya mwalimu
+          break;
+        case 'parent':
+          redirectDestination = '/parent/dashboard'; // ROLE KUBWA ya mzazi
+          break;
+        case 'student':
+          redirectDestination = '/student/dashboard';
+          break;
+        default:
+          redirectDestination = '/dashboard';
+      }
+    }
+    // ========== END REDIRECT LOGIC ==========
+    
     // Unda token
     const token = jwt.sign(
       {
@@ -124,16 +153,19 @@ export const loginUser = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
+    
+    // Set cookie
     res.cookie('access_token', token, {
       httpOnly: true,
-      secure: true,          // false local
-      sameSite: 'none',      // strict kama same-domain
-      maxAge: 24 * 60 * 60 * 1000
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
     });
 
+    // Return response with redirect field
     res.status(200).json({
       status: 'success',
-      message: 'Loged in successfull',
+      message: 'Login successful',
       data: {
         user: {
           id: user.id,
@@ -143,6 +175,7 @@ export const loginUser = async (req, res) => {
           phone_number: user.phone_number,
           last_login: user.last_login
         },
+        redirect: redirectDestination // Always exists
       }
     });
     
@@ -150,7 +183,7 @@ export const loginUser = async (req, res) => {
     console.error('Login error:', error);
     res.status(500).json({
       status: 'error',
-      message: 'Somethind went wrong please try Again or contact system admin'
+      message: 'Something went wrong please try again or contact system admin'
     });
   }
 };
