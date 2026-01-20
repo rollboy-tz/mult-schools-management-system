@@ -10,6 +10,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import axios from 'axios';
+import cookieParser from 'cookie-parser';
 
 // Database connection
 import { connectDB } from './config/database.js';
@@ -28,6 +29,9 @@ const app = express();
 
 // Security: Helmet for HTTP headers
 app.use(helmet());
+
+//security cookie perser
+app.use(cookieParser());
 
 // CORS Configuration for Render
 app.use(cors({
