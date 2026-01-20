@@ -124,9 +124,16 @@ export const loginUser = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
-    
+    res.cookie('access_token', token, {
+      httpOnly: true,
+      secure: true,          // false local
+      sameSite: 'none',      // strict kama same-domain
+      maxAge: 24 * 60 * 60 * 1000
+    });
+
     res.status(200).json({
       status: 'success',
+      data: { user }
       message: 'Successed,
       data: {
         user: {
@@ -137,7 +144,6 @@ export const loginUser = async (req, res) => {
           phone_number: user.phone_number,
           last_login: user.last_login
         },
-        token
       }
     });
     
