@@ -133,8 +133,8 @@ export const loginUser = async (req, res) => {
 
     res.status(200).json({
       status: 'success',
-      data: { user }
-      message: 'Successed',
+      data: { user },
+      message: 'Loged in successfull',
       data: {
         user: {
           id: user.id,
