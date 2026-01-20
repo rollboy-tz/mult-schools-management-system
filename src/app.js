@@ -34,7 +34,8 @@ app.use(cors({
     origin: [
         'https://edusaas-api.onrender.com',
         'http://localhost:3000',
-        'http://localhost:5173'
+        'http://localhost:5173',
+        'https://rollboy-tz.github.io'
     ],
     credentials: true
 }));
