@@ -84,7 +84,7 @@ export const loginUser = async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(401).json({
         status: 'error',
-        message: 'Barua pepe au nenosiri si sahihi'
+        message: 'Wrong email or Password'
       });
     }
     
@@ -94,7 +94,7 @@ export const loginUser = async (req, res) => {
     if (!user.is_active) {
       return res.status(403).json({
         status: 'error',
-        message: 'Akaunti imezimwa. Tafadhali wasiliana na msaada.'
+        message: 'Account is In Active please contact system admin for more info.'
       });
     }
     
@@ -104,7 +104,7 @@ export const loginUser = async (req, res) => {
     if (!isValidPassword) {
       return res.status(401).json({
         status: 'error',
-        message: 'Barua pepe au nenosiri si sahihi'
+        message: 'Wrong email or Password'
       });
     }
     
@@ -127,7 +127,7 @@ export const loginUser = async (req, res) => {
     
     res.status(200).json({
       status: 'success',
-      message: 'Login imefanikiwa',
+      message: 'Successed,
       data: {
         user: {
           id: user.id,
@@ -142,10 +142,10 @@ export const loginUser = async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Kosa la login:', error);
+    console.error('Login error:', error);
     res.status(500).json({
       status: 'error',
-      message: 'Kosa la ndani la seva wakati wa login'
+      message: 'Somethind went wrong please try Again or contact system admin'
     });
   }
 };
