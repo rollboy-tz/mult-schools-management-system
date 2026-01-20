@@ -1,80 +1,115 @@
+// middleware/auth.js
 import jwt from 'jsonwebtoken';
 import { pool } from '../config/database.js';
+import { authLogger, errorLogger } from '../utils/logger.js';
 
 export const authenticate = async (req, res, next) => {
   try {
-    const token = req.cookies?.access_token;
-
-    if (!token) {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         status: 'error',
-        message: 'Hujaingia. Tafadhali ingia kwanza.'
+        message: 'Access token required'
       });
     }
 
-    // Verify token (MARA MOJA)
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // Check if user exists and active
+    const accessToken = authHeader.split(' ')[1];
+    
+    // Verify access token
+    const decoded = jwt.verify(accessToken, process.env.JWT_ACCESS_SECRET);
+    
+    // Check if user exists and is active
     const userResult = await pool.query(
-      `SELECT id, email, full_name, user_type, is_active, phone_number, last_login
-       FROM platform_users
-       WHERE id = $1 AND is_active = true`,
+      `SELECT u.*, s.id as school_id, s.code as school_code, s.status as school_status
+       FROM platform_users u
+       LEFT JOIN schools s ON u.id = s.founder_user_id
+       WHERE u.id = $1 AND u.is_active = true`,
       [decoded.userId]
     );
 
     if (userResult.rows.length === 0) {
       return res.status(401).json({
         status: 'error',
-        message: 'Mtumiaji huyu hayupo au amezimwa. Tafadhali ingia tena.'
+        message: 'User account not found or inactive'
       });
     }
 
-    req.user = userResult.rows[0];
+    const user = userResult.rows[0];
+
+    // Check school status
+    if (user.school_status !== 'active') {
+      return res.status(403).json({
+        status: 'error',
+        message: 'School account is not active',
+        school_status: user.school_status
+      });
+    }
+
+    // Attach user to request
+    req.user = {
+      userId: user.id,
+      email: user.email,
+      userType: user.user_type,
+      schoolId: user.school_id,
+      schoolCode: user.school_code
+    };
+
     next();
 
   } catch (error) {
-    console.error('Authentication error:', error.message);
-
+    // Handle token errors
     if (error.name === 'JsonWebTokenError') {
       return res.status(401).json({
         status: 'error',
-        message: 'Token sio sahihi. Tafadhali ingia tena.'
+        message: 'Invalid access token'
       });
     }
 
     if (error.name === 'TokenExpiredError') {
       return res.status(401).json({
         status: 'error',
-        message: 'Token imekwisha muda wake. Tafadhali ingia tena.'
+        message: 'Access token expired',
+        requires_refresh: true
       });
     }
 
-    return res.status(500).json({
+    errorLogger.error('Authentication error:', error);
+    res.status(500).json({
       status: 'error',
-      message: 'Hitilafu ya ndani ya seva wakati wa uthibitishaji.'
+      message: 'Authentication failed'
     });
   }
 };
 
+// Middleware to check token expiry and refresh if needed
+export const withAutoRefresh = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader) {
+      return next();
+    }
 
-// Middleware ya kuangalia roles
-export const requireRole = (...roles) => {
-  return (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'Hauna ruhusa ya kupata rasilimali hii.'
-      });
-    }
+    const token = authHeader.split(' ')[1];
     
-    if (!roles.includes(req.user.user_type)) {
-      return res.status(403).json({
-        status: 'error',
-        message: 'Hauna ruhusa ya kufanya hatua hii.'
-      });
-    }
+    // Try to decode without verification first
+    const decoded = jwt.decode(token);
     
+    if (!decoded) {
+      return next();
+    }
+
+    // Check if token is about to expire (in next 2 minutes)
+    const expiresIn = decoded.exp * 1000 - Date.now();
+    
+    if (expiresIn < 2 * 60 * 1000) {
+      // Token is about to expire, set flag for client to refresh
+      res.setHeader('X-Token-Expiring-Soon', 'true');
+    }
+
     next();
-  };
+  } catch (error) {
+    next();
+  }
 };
