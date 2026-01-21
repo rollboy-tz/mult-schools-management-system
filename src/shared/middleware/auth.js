@@ -1,6 +1,6 @@
 // middleware/auth.js
 import jwt from 'jsonwebtoken';
-import { pool } from '../config/database.js';
+import { pool } from '.../config/database.js';
 import { authLogger, errorLogger } from '../utils/logger.js';
 
 export const authenticate = async (req, res, next) => {
