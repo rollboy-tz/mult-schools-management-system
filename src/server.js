@@ -1,0 +1,39 @@
+// server.js - STABLE ENTRY POINT
+import app from './app.js';
+import mainRouter from './routes/index.js'; // SINGLE ENTRY POINT
+
+// Attach ALL routes through single entry
+app.use('/', mainRouter);
+
+// Start server
+const PORT = process.env.PORT || 3000;
+const API_URL = process.env.API_URL 
+const url = process.env.NODE_ENV === 'production' ? API_URL : `http://localhost:${PORT} `;
+
+const server = app.listen(PORT, () => {
+  console.log(`
+🚀 Server Started Successfully!
+📍 Port: ${PORT}
+🌍 Environment: ${process.env.NODE_ENV}
+📅 ${new Date().toISOString()}
+✅ Health Check: ${url}/health
+🌐 information ${url}/info
+`);
+});
+
+// Graceful shutdown
+const shutdown = () => {
+  console.log('🛑 Shutting down gracefully...');
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
+  
+  setTimeout(() => {
+    console.error('❌ Force shutdown');
+    process.exit(1);
+  }, 10000);
+};
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
