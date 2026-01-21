@@ -20,9 +20,9 @@ router.get('/api', (req, res) => {
 
 router.get('/api/version', (req, res) => {
   res.json({
-    current: 'v2',
-    available: ['v1', 'v2'],
-    default: 'v2',
+    current: 'v1 Beta',
+    available: ['v1 Beta'],
+    default: 'v1 Beta',
     v1_sunset: '2024-12-31',
     timestamp: new Date().toISOString()
   });
