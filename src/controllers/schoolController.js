@@ -998,6 +998,62 @@ async function updateSchoolSetting(connection, schoolId, category, key, value) {
 }
 
 // ============================================
+// VERIFY FOUNDER EMAIL (Public)
+// ============================================
+
+// ============================================
+// CHECK SCHOOL CODE AVAILABILITY (Public)
+// ============================================
+export const checkSchoolCode = async (req, res) => {
+  try {
+    const { code } = req.query;
+    
+    if (!code) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'School code is required'
+      });
+    }
+
+    const result = await pool.query(
+      'SELECT id, name, status FROM schools WHERE code = $1',
+      [code.toUpperCase().trim()]
+    );
+
+    res.json({
+      status: 'success',
+      data: {
+        available: result.rows.length === 0,
+        exists: result.rows.length > 0,
+        school: result.rows[0] || null
+      }
+    });
+
+  } catch (error) {
+    errorLogger.error('Check school code failed:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to check school code'
+    });
+  }
+};
+
+// ============================================
+// PLACEHOLDER FUNCTIONS (for now)
+// ============================================
+export const updateSchoolSettings = async (req, res) => {
+  res.json({ status: 'success', message: 'To be implemented' });
+};
+
+export const updateAcademicProfile = async (req, res) => {
+  res.json({ status: 'success', message: 'To be implemented' });
+};
+
+export const getSchoolSubscription = async (req, res) => {
+  res.json({ status: 'success', message: 'To be implemented' });
+};
+
+// ============================================
 // EXPORT ALL CONTROLLERS
 // ============================================
 export default {
