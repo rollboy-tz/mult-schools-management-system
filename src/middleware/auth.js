@@ -113,3 +113,65 @@ export const withAutoRefresh = async (req, res, next) => {
     next();
   }
 };
+
+// Add this function to your existing auth.js file
+
+// Middleware to require school admin access
+export const requireSchoolAdmin = async (req, res, next) => {
+  try {
+    // Ensure user is authenticated first
+    if (!req.user) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Authentication required'
+      });
+    }
+
+    // Check if user has admin privileges
+    const allowedUserTypes = ['super_admin', 'admin', 'school_admin'];
+    
+    if (!allowedUserTypes.includes(req.user.userType)) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Admin access required',
+        required_role: 'admin',
+        current_role: req.user.userType
+      });
+    }
+
+    // Verify school relationship
+    if (!req.user.schoolId) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'No school associated with your account'
+      });
+    }
+
+    next();
+  } catch (error) {
+    errorLogger.error('School admin check error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to verify admin access'
+    });
+  }
+};
+
+// Optional: More specific role middleware
+export const requireSuperAdmin = async (req, res, next) => {
+  try {
+    if (!req.user || req.user.userType !== 'super_admin') {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Super admin access required'
+      });
+    }
+    next();
+  } catch (error) {
+    errorLogger.error('Super admin check error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to verify super admin access'
+    });
+  }
+};
