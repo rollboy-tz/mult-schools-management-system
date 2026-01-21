@@ -894,10 +894,6 @@ export const getSchoolProfile = async (req, res) => {
   res.json({ status: 'success', message: 'To be implemented' });
 };
 
-export const resendVerificationEmail = async (req, res) => {
-  res.json({ status: 'success', message: 'To be implemented' });
-};
-
 export const updateSchoolSettings = async (req, res) => {
   res.json({ status: 'success', message: 'To be implemented' });
 };

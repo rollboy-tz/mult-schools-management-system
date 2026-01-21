@@ -8,7 +8,6 @@ const router = express.Router();
 // ========== PUBLIC ROUTES ==========
 router.post('/register', schoolController.registerSchool);
 router.post('/verify', schoolController.verifyFounderEmail);
-router.post('/resend-verification', schoolController.resendVerificationEmail);
 router.get('/check-code', schoolController.checkSchoolCode);
 
 // ========== PROTECTED ROUTES ==========
