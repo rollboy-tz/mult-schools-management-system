@@ -44,4 +44,14 @@ router.get('/', (req, res) => {
   });
 });
 
+// ========== NOT FOUND HANDLER ==========
+app.use('*', (req, res) => {
+  res.status(404).json({
+    status: 'error',
+    message: 'Endpoint not found',
+    path: req.originalUrl,
+    available_routes: ['/health', '/api/v1', '/api/v2']
+  });
+});
+
 export default router;

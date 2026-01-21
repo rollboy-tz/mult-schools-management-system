@@ -1,10 +1,7 @@
 // app.js - STABLE CORE (NO BUSINESS LOGIC)
 import 'dotenv/config';
 import express from 'express';
-import helmet from 'helmet';
-import cors from 'cors';
 import compression from 'compression';
-import rateLimit from 'express-rate-limit';
 import { securityMiddleware } from './config/security.js';
 
 // Initialize app
@@ -43,6 +40,8 @@ app.use((err, req, res, next) => {
   });
 });
 
+
+/*
 // ========== NOT FOUND HANDLER ==========
 app.use('*', (req, res) => {
   res.status(404).json({
@@ -52,5 +51,5 @@ app.use('*', (req, res) => {
     available_routes: ['/health', '/api/v1', '/api/v2']
   });
 });
-
+*/
 export default app; // CLEAN EXPORT
