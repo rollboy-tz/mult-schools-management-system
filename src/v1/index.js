@@ -1,22 +1,33 @@
-import express from 'express';
-import schoolRoutes from './school.js';
-import authRoutes from './auth.js';
+// src/v1/index.js - V1 MAIN EXPORT
+// =================================
 
-const router = express.Router();
+// SCHOOL CONTROLLERS (from schools folder)
+export { 
+  schoolController,
+  registerSchool,
+  verifyFounderEmail,
+  getSchoolProfile,
+  updateSchoolProfile,
+  updateSchoolSettings,
+  updateSchoolTIN,
+  checkTINAvailability,
+  getSchoolFinancialInfo
+} from './controllers/schools/index.js';
 
-// V1 API Routes
-router.use('/schools', schoolRoutes);
-router.use('/auth', authRoutes);
+// AUTH CONTROLLER
+export { default as authController } from './controllers/authController.js';
 
-// V1 Metadata
-router.get('/', (req, res) => {
-  res.json({
-    version: 'v1',
-    status: 'active',
-    sunset_date: '2024-12-31',
-    endpoints: ['/schools', '/auth'],
-    docs: `${process.env.API_DOCS_URL}/v1`
-  });
+// USER CONTROLLER  
+export { default as userController } from './controllers/userController.js';
+
+// V1 METADATA
+export const VERSION = '1.0.0';
+export const API_NAME = 'School Management API v1';
+export const API_STATUS = 'active';
+
+// Helper to get all controllers
+export const getControllers = () => ({
+  schoolController: import('./controllers/schools/index.js').then(m => m.default),
+  authController: import('./controllers/authController.js'),
+  userController: import('./controllers/userController.js')
 });
-
-export default router;

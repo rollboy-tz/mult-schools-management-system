@@ -15,7 +15,7 @@ router.use('/api/v2', v2Routes);
 
 // ========== VERSION REDIRECTS ==========
 router.get('/api', (req, res) => {
-  res.redirect('/api/v2');
+  res.redirect('/api/v1');
 });
 
 router.get('/api/version', (req, res) => {

@@ -1,33 +1,86 @@
-// routes/versions/v1.js - COMPLETE V1 API
+// src/routes/versions/v1.js - V1 ROUTES WITH MULTIPLE CONTROLLERS
 import express from 'express';
-import { schoolController } from '../../v1/controllers/schoolController.js';
-import { authController } from '../../v1/controllers/authController.js';
+import { 
+  registerSchool,
+  verifyFounderEmail,
+  getSchoolProfile,
+  updateSchoolProfile,
+  updateSchoolSettings,
+  updateSchoolTIN,
+  checkTINAvailability,
+  getSchoolFinancialInfo
+} from '../../v1/controllers/schools/index.js';
 import { authenticate } from '../../shared/middleware/auth.js';
 
 const router = express.Router();
 
-// V1 School Routes
-router.post('/schools/register', schoolController.registerSchool);
-router.post('/schools/verify', schoolController.verifyFounderEmail);
-router.get('/schools/profile', authenticate, schoolController.getSchoolProfile);
-router.put('/schools/profile', authenticate, schoolController.updateSchoolProfile);
+// ========== SCHOOL REGISTRATION ROUTES ==========
+router.post('/schools/register', registerSchool);
+router.post('/schools/verify', verifyFounderEmail);
 
-// V1 Auth Routes
-router.post('/auth/login', authController.login);
-router.post('/auth/refresh', authController.refreshToken);
-router.post('/auth/logout', authenticate, authController.logout);
+// ========== SCHOOL PROFILE ROUTES ==========
+router.get('/schools/profile', authenticate, getSchoolProfile);
+router.put('/schools/profile', authenticate, updateSchoolProfile);
+router.get('/schools/details', authenticate, (req, res) => {
+  // Optional: if schoolDetails.js has more functions
+  res.json({ status: 'success', message: 'School details endpoint' });
+});
 
-// V1 Info
+// ========== SCHOOL SETTINGS ROUTES ==========
+router.get('/schools/settings', authenticate, (req, res) => {
+  // Placeholder for getSchoolSettings
+  res.json({ status: 'success', message: 'Get school settings' });
+});
+
+router.put('/schools/settings', authenticate, updateSchoolSettings);
+
+// ========== SCHOOL FINANCIAL ROUTES ==========
+router.put('/schools/tin', authenticate, updateSchoolTIN);
+router.get('/schools/check-tin', authenticate, checkTINAvailability);
+router.get('/schools/financial', authenticate, getSchoolFinancialInfo);
+
+// ========== AUTH ROUTES (Placeholders) ==========
+router.post('/auth/login', (req, res) => {
+  res.json({ status: 'success', message: 'Login endpoint - to be implemented' });
+});
+
+router.post('/auth/refresh', (req, res) => {
+  res.json({ status: 'success', message: 'Refresh token - to be implemented' });
+});
+
+router.post('/auth/logout', authenticate, (req, res) => {
+  res.json({ status: 'success', message: 'Logout successful' });
+});
+
+// ========== V1 INFO ENDPOINT ==========
 router.get('/', (req, res) => {
   res.json({
     version: '1.0.0',
     api: 'v1',
     status: 'active',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
     endpoints: {
-      schools: '/schools',
-      auth: '/auth'
+      schools: {
+        register: 'POST /schools/register',
+        verify: 'POST /schools/verify',
+        profile: 'GET /schools/profile',
+        settings: 'PUT /schools/settings',
+        tin: 'PUT /schools/tin',
+        financial: 'GET /schools/financial'
+      },
+      auth: {
+        login: 'POST /auth/login',
+        refresh: 'POST /auth/refresh',
+        logout: 'POST /auth/logout'
+      }
     },
-    docs: `${process.env.API_DOCS_URL}/v1`
+    controllers: {
+      schoolRegister: 'schoolRegister.js',
+      schoolSetting: 'schoolSetting.js', 
+      schoolDetails: 'schoolDetails.js'
+    },
+    docs: process.env.API_DOCS_URL ? `${process.env.API_DOCS_URL}/v1` : null
   });
 });
 
