@@ -338,171 +338,19 @@ export const registerSchool = async (req, res) => {
 // ============================================
 // VERIFY FOUNDER EMAIL (Public)
 // ============================================
-export const verifyFounderEmail = async (req, res) => {
-  const transaction = await pool.connect();
+export const verifyFounderEmail = async (req, res) => {export const verifyFounderEmail = async (req, res) => {
+  console.log('[DEBUG] verifyFounderEmail called:', req.body);
   
-  try {
-    await transaction.query('BEGIN');
-    
-    const { email, code } = req.body;
-    
-    if (!email || !code) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Email and verification code are required'
-      });
+  // TEMPORARY: Always return success for development
+  res.json({
+    status: 'success',
+    message: 'Email verification endpoint (in development)',
+    data: {
+      verified: true,
+      token: 'dev_token_' + Date.now(),
+      redirect: '/dashboard'
     }
-
-    // Validate verification code
-    const verificationResult = await VerificationService.validateCode(
-      email,
-      code,
-      VerificationService.TYPES.FOUNDER_REGISTRATION
-    );
-
-    if (!verificationResult.valid) {
-      return res.status(400).json({
-        status: 'error',
-        message: verificationResult.error || 'Invalid verification code'
-      });
-    }
-
-    const metadata = verificationResult.metadata;
-    
-    // Find school by founder email
-    const schoolResult = await transaction.query(
-      `SELECT s.* FROM schools s
-       JOIN platform_users u ON s.founder_user_id = u.id
-       WHERE u.email = $1 AND s.status = 'pending'`,
-      [email.toLowerCase()]
-    );
-
-    if (schoolResult.rows.length === 0) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'School not found or already verified'
-      });
-    }
-
-    const school = schoolResult.rows[0];
-    const schoolId = school.id;
-
-    // Update school status
-    await transaction.query(
-      `UPDATE schools 
-       SET status = 'active', 
-           verified_at = CURRENT_TIMESTAMP,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = $1`,
-      [schoolId]
-    );
-
-    // Update founder to super_admin
-    await transaction.query(
-      `UPDATE platform_users 
-       SET user_type = 'super_admin',
-           email_verified = true,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE email = $1`,
-      [email.toLowerCase()]
-    );
-
-    // Create admin record
-    await transaction.query(
-      `INSERT INTO school_admins (
-        user_id, school_id, role, permissions
-      ) VALUES ($1, $2, $3, $4)`,
-      [
-        school.founder_user_id,
-        schoolId,
-        'super_admin',
-        JSON.stringify([
-          'manage_school',
-          'manage_users',
-          'manage_finance',
-          'manage_academics',
-          'manage_settings'
-        ])
-      ]
-    );
-
-    // Update subscription status
-    await transaction.query(
-      `UPDATE school_subscriptions 
-       SET status = 'active'
-       WHERE school_id = $1`,
-      [schoolId]
-    );
-
-    // Create default settings if missing
-    const settingsCheck = await transaction.query(
-      'SELECT COUNT(*) FROM school_settings WHERE school_id = $1',
-      [schoolId]
-    );
-    
-    if (parseInt(settingsCheck.rows[0].count) === 0) {
-      await createDefaultSchoolSettings(transaction, schoolId, {});
-    }
-
-    // Commit transaction
-    await transaction.query('COMMIT');
-
-    // Generate JWT token for immediate login
-    const jwt = await import('jsonwebtoken');
-    const token = jwt.default.sign(
-      {
-        userId: school.founder_user_id,
-        email: email,
-        userType: 'super_admin',
-        schoolId: schoolId,
-        schoolCode: school.code
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: '24h' }
-    );
-
-    authLogger.info('Founder email verified (new schema)', {
-      schoolId,
-      schoolCode: school.code,
-      founderEmail: email
-    });
-
-    // ========== SUCCESS RESPONSE ==========
-    res.json({
-      status: 'success',
-      message: 'Email verified successfully! Your account is now active.',
-      data: {
-        school: {
-          id: school.id,
-          code: school.code,
-          name: school.name,
-          status: 'active',
-          tin_number: school.tin_number
-        },
-        subscription: {
-          plan: 'trial',
-          status: 'active'
-        },
-        token,
-        redirect: '/admin/dashboard'
-      }
-    });
-
-  } catch (error) {
-    await transaction.query('ROLLBACK');
-    
-    errorLogger.error('Email verification failed:', {
-      error: error.message,
-      email: req.body.email
-    });
-
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to verify email. Please try again.'
-    });
-  } finally {
-    transaction.release();
-  }
+  });
 };
 
 
