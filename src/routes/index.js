@@ -6,6 +6,13 @@ import v1Routes from './versions/v1.js';
 
 const router = express.Router();
 
+// Trace ALL incoming requests
+router.use((req, res, next) => {
+  console.log(`📦 ROUTES INDEX: Received ${req.method} ${req.originalUrl}`);
+  console.log(`   ↳ Looking for route match...`);
+  next();
+});
+
 // ========== PUBLIC HEALTH ==========
 router.use('/health', healthRoutes);
 
@@ -41,16 +48,6 @@ router.get('/', (req, res) => {
     docs: process.env.API_DOCS_URL,
     support: process.env.SUPPORT_EMAIL,
     timestamp: new Date().toISOString()
-  });
-});
-
-// ========== NOT FOUND HANDLER ==========
-app.use('*', (req, res) => {
-  res.status(404).json({
-    status: 'error',
-    message: 'Endpoint not found',
-    path: req.originalUrl,
-    available_routes: ['/health', '/api/v1', '/api/v2']
   });
 });
 

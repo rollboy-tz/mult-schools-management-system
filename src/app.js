@@ -7,6 +7,15 @@ import { securityMiddleware } from './config/security.js';
 // Initialize app
 const app = express();
 
+// app.js - Add at the TOP, before all middleware
+app.use((req, res, next) => {
+  console.log(`🔍 [${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+  console.log(`   ↳ Headers:`, req.headers['user-agent']);
+  console.log(`   ↳ Query:`, req.query);
+  console.log(`   ↳ Body keys:`, Object.keys(req.body));
+  next();
+});
+
 // ========== SECURITY MIDDLEWARE (STABLE) ==========
 app.use(securityMiddleware); // All security in one place
 
@@ -40,16 +49,14 @@ app.use((err, req, res, next) => {
   });
 });
 
-
-/*
 // ========== NOT FOUND HANDLER ==========
 app.use('*', (req, res) => {
   res.status(404).json({
     status: 'error',
     message: 'Endpoint not found',
     path: req.originalUrl,
-    available_routes: ['/health', '/api/v1', '/api/v2']
+    info_routes: ['/info']
   });
 });
-*/
+
 export default app; // CLEAN EXPORT
