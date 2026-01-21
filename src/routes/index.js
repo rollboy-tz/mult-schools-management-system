@@ -2,7 +2,7 @@
 import express from 'express';
 import healthRoutes from './health.js';
 import v1Routes from './versions/v1.js';
-import v2Routes from './versions/v2.js';
+// import v2Routes from './versions/v2.js'; This will be used for next API version
 
 const router = express.Router();
 
@@ -11,7 +11,7 @@ router.use('/health', healthRoutes);
 
 // ========== API VERSIONS ==========
 router.use('/api/v1', v1Routes);
-router.use('/api/v2', v2Routes);
+// router.use('/api/v2', v2Routes); This will be used for next API version
 
 // ========== VERSION REDIRECTS ==========
 router.get('/api', (req, res) => {
