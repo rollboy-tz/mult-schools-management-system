@@ -2,7 +2,7 @@
 
 import express from 'express';
 import axios from 'axios';
-import { emailService, checkEmailServiceHealth } from '../shared/services/email/index.js';
+// import { emailService, checkEmailServiceHealth } from '../shared/services/email/index.js';
 import { pool } from '../config/database.js';
 
 const router = express.Router();
@@ -74,6 +74,7 @@ router.get('/database', async (req, res) => {
 // ============================================
 // 3. EMAIL SERVICE HEALTH CHECK
 // ============================================
+/*
 router.get('/email', async (req, res) => {
   try {
     const emailHealth = await checkEmailServiceHealth();
@@ -99,7 +100,7 @@ router.get('/email', async (req, res) => {
     });
   }
 });
-
+*/
 // ============================================
 // 4. PYTHON API HEALTH CHECK
 // ============================================
@@ -225,7 +226,7 @@ router.get('/full', async (req, res) => {
       timestamp: new Date().toISOString()
     };
   }
-  
+  /*
   try {
     // Check email service
     const emailStart = Date.now();
@@ -241,7 +242,7 @@ router.get('/full', async (req, res) => {
       timestamp: new Date().toISOString()
     };
   }
-  
+  */
   try {
     // Check Python API
     const pythonStart = Date.now();
@@ -311,12 +312,14 @@ router.get('/detailed', async (req, res) => {
     services[1].status = 'unhealthy';
   }
   
+  /*
   try {
     const emailHealth = await checkEmailServiceHealth();
     services[2].status = emailHealth.status;
   } catch {
     services[2].status = 'unhealthy';
   }
+  */
   
   try {
     const pythonApiUrl = process.env.PYTHON_API_URL || 'https://eduasas-python.onrender.com';
@@ -363,13 +366,16 @@ router.get('/ready', async (req, res) => {
     readinessChecks.push({ service: 'database', status: 'not_ready', error: error.message });
   }
   
+
+  /*
   // Email service readiness (basic check)
   if (process.env.RESEND_API_KEY) {
     readinessChecks.push({ service: 'email', status: 'ready' });
   } else {
     readinessChecks.push({ service: 'email', status: 'not_ready', error: 'RESEND_API_KEY not configured' });
   }
-  
+  */
+
   const allReady = readinessChecks.every(check => check.status === 'ready');
   
   res.status(allReady ? 200 : 503).json({
