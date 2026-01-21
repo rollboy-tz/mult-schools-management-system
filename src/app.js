@@ -1,3 +1,15 @@
+// Add error handling for startup
+process.on('uncaughtException', (error) => {
+  console.error('UNCAUGHT EXCEPTION:', error.message);
+  console.error(error.stack);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('UNHANDLED REJECTION at:', promise, 'reason:', reason);
+});
+
+
+
 // app.js or server.js
 import express from 'express';
 import cors from 'cors';
@@ -251,5 +263,28 @@ app.use((req, res, next) => {
   
   next();
 });
+
+
+// Debug startup
+console.log('=== SERVER STARTUP INFO ===');
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('PORT:', process.env.PORT);
+console.log('Database connected:', !!process.env.DATABASE_URL);
+console.log('Allowed origins:', process.env.ALLOWED_ORIGINS);
+
+// Start server
+const PORT = process.env.PORT || 3000;
+
+try {
+  app.listen(PORT, () => {
+    console.log(`✅ Server running on port ${PORT}`);
+    console.log(`✅ Environment: ${process.env.NODE_ENV}`);
+  });
+} catch (error) {
+  console.error('❌ Failed to start server:', error.message);
+  console.error(error.stack);
+  process.exit(1);
+}
+
 
 export default app;
