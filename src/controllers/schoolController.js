@@ -1041,6 +1041,11 @@ export const checkSchoolCode = async (req, res) => {
 // ============================================
 // PLACEHOLDER FUNCTIONS (for now)
 // ============================================
+
+export const getSchoolProfile = async (req, res) => {
+  res.json({ status: 'success', message: 'To be implemented' });
+};
+
 export const updateSchoolSettings = async (req, res) => {
   res.json({ status: 'success', message: 'To be implemented' });
 };
