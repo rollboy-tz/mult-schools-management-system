@@ -49,14 +49,6 @@ app.use((err, req, res, next) => {
   });
 });
 
-// ========== NOT FOUND HANDLER ==========
-app.use('*', (req, res) => {
-  res.status(404).json({
-    status: 'error',
-    message: 'Endpoint not found',
-    path: req.originalUrl,
-    info_routes: ['/info']
-  });
-});
+
 
 export default app; // CLEAN EXPORT
