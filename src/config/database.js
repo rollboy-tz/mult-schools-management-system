@@ -1,7 +1,7 @@
 // config/database.js - DATABASE CONFIGURATION & CONNECTION MANAGEMENT
 import pg from 'pg';
 const { Pool } = pg;
-import { databaseLogger } from '../shared/utils/logger.js';
+import { dbLogger } from '../shared/utils/logger.js';
 
 class DatabaseManager {
   constructor() {
@@ -50,21 +50,21 @@ class DatabaseManager {
 
       // Event listeners
       this.pool.on('connect', () => {
-        databaseLogger.info('Database connection established');
+        dbLogger.info('Database connection established');
       });
 
       this.pool.on('error', (err) => {
-        databaseLogger.error('Unexpected database pool error:', err);
+        dbLogger.error('Unexpected database pool error:', err);
       });
 
       this.pool.on('remove', () => {
-        databaseLogger.info('Database connection removed from pool');
+        dbLogger.info('Database connection removed from pool');
       });
 
-      databaseLogger.info('Database pool initialized successfully');
+      dbLogger.info('Database pool initialized successfully');
       
     } catch (error) {
-      databaseLogger.error('Failed to initialize database pool:', error);
+      dbLogger.error('Failed to initialize database pool:', error);
       throw error;
     }
   }
@@ -85,7 +85,7 @@ class DatabaseManager {
       const result = await this.pool.query(text, params);
       const duration = Date.now() - start;
       
-      databaseLogger.debug('Database query executed', {
+      dbLogger.debug('Database query executed', {
         query: text.substring(0, 100), // Log first 100 chars
         duration: `${duration}ms`,
         rowCount: result.rowCount
@@ -96,7 +96,7 @@ class DatabaseManager {
     } catch (error) {
       const duration = Date.now() - start;
       
-      databaseLogger.error('Database query failed:', {
+      dbLogger.error('Database query failed:', {
         error: error.message,
         query: text.substring(0, 200),
         params: params ? JSON.stringify(params) : 'none',
@@ -217,10 +217,10 @@ class DatabaseManager {
     try {
       if (this.pool) {
         await this.pool.end();
-        databaseLogger.info('Database pool closed gracefully');
+        dbLogger.info('Database pool closed gracefully');
       }
     } catch (error) {
-      databaseLogger.error('Error closing database pool:', error);
+      dbLogger.error('Error closing database pool:', error);
     }
   }
 
@@ -274,9 +274,9 @@ class DatabaseManager {
       for (const query of setupQueries) {
         await this.query(query);
       }
-      databaseLogger.info('Database setup completed');
+      dbLogger.info('Database setup completed');
     } catch (error) {
-      databaseLogger.error('Database setup failed:', error);
+      dbLogger.error('Database setup failed:', error);
       throw error;
     }
   }
