@@ -338,7 +338,7 @@ export const registerSchool = async (req, res) => {
 // ============================================
 // VERIFY FOUNDER EMAIL (Public)
 // ============================================
-export const verifyFounderEmail = async (req, res) => {export const verifyFounderEmail = async (req, res) => {
+export const verifyFounderEmail = async (req, res) => {
   console.log('[DEBUG] verifyFounderEmail called:', req.body);
   
   // TEMPORARY: Always return success for development
