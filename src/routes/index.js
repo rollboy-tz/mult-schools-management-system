@@ -1,35 +1,47 @@
-// routes/index.js - PUBLIC ENTRY POINT (Only this changes for new versions)
+// routes/index.js - SINGLE ENTRY POINT
 import express from 'express';
 import healthRoutes from './health.js';
-import v1Routes from './v1/index.js';
-import v2Routes from './v2/index.js';
+import v1Routes from './versions/v1.js';
+import v2Routes from './versions/v2.js';
 
 const router = express.Router();
 
-// ========== PUBLIC ROUTES & INFO CHECK (No version) ==========
-router.use('/health', healthRoutes);
+// ========== PUBLIC HEALTH ==========
 router.use('/health', healthRoutes);
 
 // ========== API VERSIONS ==========
-router.use('/api/v1', v1Routes); // Version 1
-//router.use('/api/v2', v2Routes); // Version 2
+router.use('/api/v1', v1Routes);
+router.use('/api/v2', v2Routes);
 
-// ========== DEFAULT VERSION REDIRECT ==========
-router.use('/api', (req, res) => {
-  res.redirect(301, '/api/v1' + req.path); // Should upgraded;
+// ========== VERSION REDIRECTS ==========
+router.get('/api', (req, res) => {
+  res.redirect('/api/v2');
 });
 
-// ========== ROOT REDIRECT ==========
-router.get('/', (req, res) => {
+router.get('/api/version', (req, res) => {
   res.json({
-    service: 'School Management API',
-    versions: {
-      v1: '/api/v1 (Beta)',
-    },
-    health: '/health',
-    docs: process.env.API_DOCS_URL,
+    current: 'v2',
+    available: ['v1', 'v2'],
+    default: 'v2',
+    v1_sunset: '2024-12-31',
     timestamp: new Date().toISOString()
   });
 });
 
-export default router; // SINGLE EXPORT
+// ========== ROOT INFO ==========
+router.get('/', (req, res) => {
+  res.json({
+    service: 'School Management API',
+    description: 'Multi-tenant school management system',
+    versions: {
+      v1: '/api/v1',
+      v2: '/api/v2'
+    },
+    health: '/health',
+    docs: process.env.API_DOCS_URL,
+    support: process.env.SUPPORT_EMAIL,
+    timestamp: new Date().toISOString()
+  });
+});
+
+export default router;
