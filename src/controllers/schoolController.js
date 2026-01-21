@@ -3,9 +3,11 @@ import { pool } from '../config/database.js';
 import VerificationService from '../services/VerificationService.js';
 import { generateSchoolCode } from '../utils/helpers.js';
 import { authLogger, errorLogger } from '../utils/logger.js';
+import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 
 // ============================================
-// REGISTER SCHOOL (Public)
+// REGISTER SCHOOL (Public) - TIN IS OPTIONAL
 // ============================================
 export const registerSchool = async (req, res) => {
   const transaction = await pool.connect();
@@ -14,34 +16,39 @@ export const registerSchool = async (req, res) => {
     await transaction.query('BEGIN');
     
     const {
-      // School Information
-      name,
-      email,
-      phone,
-      address,
-      district,
-      region,
-      country = 'Tanzania',
+      // School Information (from your JSON example)
+      school_name,
+      school_email,
+      school_phone,
+      school_address,
+      school_district,
+      school_region,
+      school_type = 'primary',
       
-      // Founder Information
+      // Founder Information (from your JSON example)
       founder_name,
       founder_email,
       founder_phone,
       founder_password,
-      founder_position = 'director',
+      founder_position = 'principal',
       
-      // Agreements
+      // Additional fields (TIN is now OPTIONAL)
+      tin_number = null,
+      registration_number = null,
+      website = null,
+      
+      // Agreements (from your JSON example)
       agree_terms,
       agree_admin
     } = req.body;
 
     // ========== VALIDATION ==========
     
-    // Required fields
+    // Required fields (TIN removed from required)
     const requiredFields = {
-      name: 'School name is required',
-      email: 'School email is required',
-      phone: 'School phone is required',
+      school_name: 'School name is required',
+      school_email: 'School email is required',
+      school_phone: 'School phone is required',
       founder_name: 'Founder name is required',
       founder_email: 'Founder email is required',
       founder_password: 'Founder password is required',
@@ -59,9 +66,9 @@ export const registerSchool = async (req, res) => {
       }
     }
 
-    // Email format
+    // Email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email) || !emailRegex.test(founder_email)) {
+    if (!emailRegex.test(school_email) || !emailRegex.test(founder_email)) {
       return res.status(400).json({
         status: 'error',
         message: 'Invalid email format',
@@ -71,14 +78,22 @@ export const registerSchool = async (req, res) => {
 
     // Phone format (Tanzania)
     const phoneRegex = /^(\+255|0)[1-9]\d{8}$/;
-    const cleanPhone = phone.replace(/\s/g, '');
-    const cleanFounderPhone = founder_phone.replace(/\s/g, '');
+    const cleanSchoolPhone = school_phone.replace(/\s/g, '');
+    const cleanFounderPhone = founder_phone?.replace(/\s/g, '');
     
-    if (!phoneRegex.test(cleanPhone) || !phoneRegex.test(cleanFounderPhone)) {
+    if (!phoneRegex.test(cleanSchoolPhone)) {
       return res.status(400).json({
         status: 'error',
-        message: 'Invalid phone number. Use +255 or 0 followed by 9 digits',
-        field: 'phone'
+        message: 'Invalid school phone number. Use +255 or 0 followed by 9 digits',
+        field: 'school_phone'
+      });
+    }
+
+    if (founder_phone && !phoneRegex.test(cleanFounderPhone)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid founder phone number',
+        field: 'founder_phone'
       });
     }
 
@@ -91,10 +106,10 @@ export const registerSchool = async (req, res) => {
       });
     }
 
-    // Check existing school
+    // Check existing school by email or phone
     const existingSchool = await transaction.query(
       'SELECT id FROM schools WHERE email = $1 OR phone = $2',
-      [email.toLowerCase(), cleanPhone]
+      [school_email.toLowerCase(), cleanSchoolPhone]
     );
 
     if (existingSchool.rows.length > 0) {
@@ -104,25 +119,37 @@ export const registerSchool = async (req, res) => {
       });
     }
 
-    // ========== CREATE SCHOOL ==========
+    // Check existing founder
+    const existingFounder = await transaction.query(
+      'SELECT id FROM platform_users WHERE email = $1',
+      [founder_email.toLowerCase()]
+    );
+
+    if (existingFounder.rows.length > 0) {
+      return res.status(409).json({
+        status: 'error',
+        message: 'Founder email already registered'
+      });
+    }
+
+    // ========== CREATE SCHOOL (Table 1) ==========
     
     const schoolCode = await generateSchoolCode();
     
     const schoolResult = await transaction.query(
       `INSERT INTO schools (
-        name, email, phone, address, district, region, country,
-        code, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      RETURNING id, code, name, email, phone, status, created_at`,
+        name, code, email, phone, address,
+        tin_number, registration_number, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING id, code, name, email, phone, status, created_at, tin_number`,
       [
-        name.trim(),
-        email.toLowerCase().trim(),
-        cleanPhone,
-        address?.trim() || null,
-        district?.trim() || null,
-        region?.trim() || null,
-        country.trim(),
+        school_name.trim(),
         schoolCode,
+        school_email.toLowerCase().trim(),
+        cleanSchoolPhone,
+        school_address?.trim() || null,
+        tin_number?.trim() || null,  // NOW OPTIONAL
+        registration_number?.trim() || null,
         'pending' // Awaiting verification
       ]
     );
@@ -132,17 +159,18 @@ export const registerSchool = async (req, res) => {
 
     // ========== CREATE FOUNDER ACCOUNT ==========
     
-    const bcrypt = await import('bcryptjs');
-    const hashedPassword = await bcrypt.default.hash(founder_password, 10);
+    const hashedPassword = await bcrypt.hash(founder_password, 10);
+    const founderUserId = crypto.randomUUID();
     
     const founderResult = await transaction.query(
       `INSERT INTO platform_users (
-        email, phone, password_hash, full_name, user_type
-      ) VALUES ($1, $2, $3, $4, $5)
+        id, email, phone, password_hash, full_name, user_type
+      ) VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING id, email, full_name, user_type`,
       [
+        founderUserId,
         founder_email.toLowerCase().trim(),
-        cleanFounderPhone,
+        cleanFounderPhone || null,
         hashedPassword,
         founder_name.trim(),
         'pending_admin' // Will become 'super_admin' after verification
@@ -153,10 +181,65 @@ export const registerSchool = async (req, res) => {
     const founderId = founder.id;
 
     // Link founder to school
+    try {
+      await transaction.query(
+        'ALTER TABLE schools ADD COLUMN IF NOT EXISTS founder_user_id UUID REFERENCES platform_users(id)'
+      );
+      
+      await transaction.query(
+        'UPDATE schools SET founder_user_id = $1 WHERE id = $2',
+        [founderId, schoolId]
+      );
+    } catch (alterError) {
+      authLogger.warn('Could not link founder to school:', alterError.message);
+    }
+
+    // ========== CREATE SCHOOL ACADEMIC PROFILE (Table 4) ==========
     await transaction.query(
-      'UPDATE schools SET founder_user_id = $1 WHERE id = $2',
-      [founderId, schoolId]
+      `INSERT INTO school_academic_profiles (
+        school_id, level, grading_system, exam_board,
+        academic_year_structure, default_language, currency
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        schoolId,
+        school_type === 'primary' ? 'primary' : 
+         school_type === 'secondary' ? 'secondary' : 
+         school_type === 'college' ? 'college' : 'primary',
+        'NECTA', // Default for Tanzania
+        'NECTA',
+        'terms',
+        'sw',
+        'TZS'
+      ]
     );
+
+    // ========== CREATE SCHOOL SUBSCRIPTION (Table 3) ==========
+    const trialEndDate = new Date();
+    trialEndDate.setDate(trialEndDate.getDate() + 30); // 30-day trial
+    
+    await transaction.query(
+      `INSERT INTO school_subscriptions (
+        school_id, plan_name, status, start_date, end_date,
+        auto_renew
+      ) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [
+        schoolId,
+        'trial',
+        'trial',
+        new Date(),
+        trialEndDate,
+        true
+      ]
+    );
+
+    // ========== CREATE DEFAULT SCHOOL SETTINGS (Table 2) ==========
+    await createDefaultSchoolSettings(transaction, schoolId, {
+      district: school_district,
+      region: school_region,
+      type: school_type,
+      website: website,
+      tin_number: tin_number // Save TIN in settings too
+    });
 
     // ========== SEND VERIFICATION EMAIL ==========
     
@@ -164,7 +247,7 @@ export const registerSchool = async (req, res) => {
       await VerificationService.sendFounderVerification({
         founderEmail: founder_email,
         founderName: founder_name,
-        schoolName: name,
+        schoolName: school_name,
         schoolCode: schoolCode
       });
     } catch (emailError) {
@@ -180,12 +263,13 @@ export const registerSchool = async (req, res) => {
     await transaction.query('COMMIT');
 
     // Log successful registration
-    authLogger.info('School registered successfully', {
+    authLogger.info('School registered successfully (TIN optional)', {
       schoolId,
       schoolCode,
-      schoolName: name,
+      schoolName: school_name,
       founderEmail: founder_email,
-      region
+      region: school_region,
+      hasTin: !!tin_number
     });
 
     // ========== SUCCESS RESPONSE ==========
@@ -198,12 +282,21 @@ export const registerSchool = async (req, res) => {
           code: school.code,
           name: school.name,
           email: school.email,
-          status: school.status
+          status: school.status,
+          has_tin: !!school.tin_number, // Indicate if TIN exists
+          tin_number: school.tin_number || null
+        },
+        subscription: {
+          plan: 'trial',
+          end_date: trialEndDate.toISOString().split('T')[0],
+          days_remaining: 30
         },
         next_steps: [
           'Check your email for verification code',
           'Verify your account within 30 minutes',
-          'Complete school setup after verification'
+          school.tin_number ? 
+            'Your TIN is registered for receipts' : 
+            'Add TIN number later for receipt generation'
         ]
       }
     });
@@ -220,9 +313,14 @@ export const registerSchool = async (req, res) => {
 
     // Handle specific errors
     if (error.code === '23505') { // Unique violation
+      const field = error.constraint.includes('email') ? 'email' :
+                   error.constraint.includes('phone') ? 'phone' :
+                   error.constraint.includes('code') ? 'code' : 'field';
+      
       return res.status(409).json({
         status: 'error',
-        message: 'A school with similar details already exists'
+        message: `School ${field} already exists`,
+        field
       });
     }
 
@@ -237,182 +335,17 @@ export const registerSchool = async (req, res) => {
 };
 
 // ============================================
-// VERIFY FOUNDER EMAIL (Public)
+// UPDATE SCHOOL TIN NUMBER (Authenticated)
 // ============================================
-export const verifyFounderEmail = async (req, res) => {
+export const updateSchoolTIN = async (req, res) => {
   const transaction = await pool.connect();
   
   try {
     await transaction.query('BEGIN');
     
-    const { email, code } = req.body;
-    
-    if (!email || !code) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Email and verification code are required'
-      });
-    }
-
-    // Validate verification code
-    const verificationResult = await VerificationService.validateCode(
-      email,
-      code,
-      VerificationService.TYPES.FOUNDER_REGISTRATION
-    );
-
-    if (!verificationResult.valid) {
-      return res.status(400).json({
-        status: 'error',
-        message: verificationResult.error || 'Invalid verification code'
-      });
-    }
-
-    const metadata = verificationResult.metadata;
-    
-    // Find school by founder email
-    const schoolResult = await transaction.query(
-      `SELECT s.* FROM schools s
-       JOIN platform_users u ON s.founder_user_id = u.id
-       WHERE u.email = $1 AND s.status = 'pending'`,
-      [email.toLowerCase()]
-    );
-
-    if (schoolResult.rows.length === 0) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'School not found or already verified'
-      });
-    }
-
-    const school = schoolResult.rows[0];
-    const schoolId = school.id;
-
-    // Update school status
-    await transaction.query(
-      `UPDATE schools 
-       SET status = 'active', 
-           verified_at = CURRENT_TIMESTAMP,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = $1`,
-      [schoolId]
-    );
-
-    // Update founder to super_admin
-    await transaction.query(
-      `UPDATE platform_users 
-       SET user_type = 'super_admin',
-           email_verified = true,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE email = $1`,
-      [email.toLowerCase()]
-    );
-
-    // Create admin record
-    await transaction.query(
-      `INSERT INTO school_admins (
-        user_id, school_id, role, permissions
-      ) VALUES ($1, $2, $3, $4)`,
-      [
-        school.founder_user_id,
-        schoolId,
-        'super_admin',
-        JSON.stringify([
-          'manage_school',
-          'manage_users',
-          'manage_finance',
-          'manage_academics',
-          'manage_settings'
-        ])
-      ]
-    );
-
-    // Create default subscription
-    const trialEndDate = new Date();
-    trialEndDate.setDate(trialEndDate.getDate() + 30);
-    
-    await transaction.query(
-      `INSERT INTO school_subscriptions (
-        school_id, plan_name, status, start_date, end_date,
-        trial_end_date, max_students, max_teachers
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [
-        schoolId,
-        'trial',
-        'trial',
-        new Date(),
-        trialEndDate,
-        trialEndDate,
-        100,
-        20
-      ]
-    );
-
-    // Create default settings
-    await createDefaultSchoolSettings(transaction, schoolId);
-
-    // Commit transaction
-    await transaction.query('COMMIT');
-
-    // Generate JWT token for immediate login
-    const jwt = await import('jsonwebtoken');
-    const token = jwt.default.sign(
-      {
-        userId: school.founder_user_id,
-        email: email,
-        userType: 'super_admin',
-        schoolId: schoolId,
-        schoolCode: school.code
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: '24h' }
-    );
-
-    authLogger.info('Founder email verified', {
-      schoolId,
-      schoolCode: school.code,
-      founderEmail: email
-    });
-
-    res.json({
-      status: 'success',
-      message: 'Email verified successfully! Your account is now active.',
-      data: {
-        school: {
-          id: school.id,
-          code: school.code,
-          name: school.name,
-          status: 'active'
-        },
-        token,
-        redirect: '/admin/setup'
-      }
-    });
-
-  } catch (error) {
-    await transaction.query('ROLLBACK');
-    
-    errorLogger.error('Email verification failed:', {
-      error: error.message,
-      email: req.body.email
-    });
-
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to verify email. Please try again.'
-    });
-  } finally {
-    transaction.release();
-  }
-};
-
-// ============================================
-// GET SCHOOL PROFILE (Authenticated)
-// ============================================
-export const getSchoolProfile = async (req, res) => {
-  try {
     const schoolId = req.user.schoolId;
-    
+    const { tin_number } = req.body;
+
     if (!schoolId) {
       return res.status(400).json({
         status: 'error',
@@ -420,72 +353,110 @@ export const getSchoolProfile = async (req, res) => {
       });
     }
 
-    // Get basic school info
-    const schoolResult = await pool.query(
-      `SELECT 
-        id, code, name, email, phone, address,
-        district, region, country, status,
-        founder_user_id, verified_at, registration_date,
-        created_at, updated_at
-       FROM schools 
-       WHERE id = $1 AND status = 'active'`,
-      [schoolId]
-    );
-
-    if (schoolResult.rows.length === 0) {
-      return res.status(404).json({
+    if (!tin_number) {
+      return res.status(400).json({
         status: 'error',
-        message: 'School not found or inactive'
+        message: 'TIN number is required'
       });
     }
 
-    const school = schoolResult.rows[0];
+    // Validate TIN format (basic validation)
+    if (tin_number.length < 6) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'TIN number is too short'
+      });
+    }
 
-    // Get subscription info
-    const subscriptionResult = await pool.query(
-      `SELECT plan_name, status, end_date, max_students, max_teachers
-       FROM school_subscriptions 
-       WHERE school_id = $1 AND status IN ('active', 'trial')`,
-      [schoolId]
+    // Check if TIN already used by another school
+    const existingTIN = await transaction.query(
+      'SELECT id, name FROM schools WHERE tin_number = $1 AND id != $2',
+      [tin_number.trim(), schoolId]
     );
 
-    // Get settings count
-    const settingsResult = await pool.query(
-      `SELECT COUNT(*) as count FROM school_settings WHERE school_id = $1`,
-      [schoolId]
+    if (existingTIN.rows.length > 0) {
+      return res.status(409).json({
+        status: 'error',
+        message: 'TIN number already registered to another school',
+        school: existingTIN.rows[0].name
+      });
+    }
+
+    // Update TIN in schools table
+    const result = await transaction.query(
+      `UPDATE schools 
+       SET tin_number = $1, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2
+       RETURNING id, code, name, tin_number, updated_at`,
+      [tin_number.trim(), schoolId]
     );
 
-    // Remove sensitive data
-    delete school.founder_user_id;
+    if (result.rows.length === 0) {
+      await transaction.query('ROLLBACK');
+      return res.status(404).json({
+        status: 'error',
+        message: 'School not found'
+      });
+    }
+
+    // Also save in settings for backup
+    await transaction.query(
+      `INSERT INTO school_settings 
+       (school_id, category, setting_key, setting_value, setting_type, updated_at)
+       VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+       ON CONFLICT (school_id, setting_key) 
+       DO UPDATE SET 
+         setting_value = EXCLUDED.setting_value,
+         updated_at = EXCLUDED.updated_at`,
+      [
+        schoolId,
+        'financial',
+        'tin_number',
+        tin_number.trim(),
+        'string'
+      ]
+    );
+
+    await transaction.query('COMMIT');
+
+    authLogger.info('School TIN updated', {
+      schoolId,
+      tin_number
+    });
 
     res.json({
       status: 'success',
+      message: 'TIN number updated successfully',
       data: {
-        school,
-        subscription: subscriptionResult.rows[0] || null,
-        stats: {
-          settings: parseInt(settingsResult.rows[0].count) || 0
-          // Other stats can be added from separate services
+        school: {
+          id: result.rows[0].id,
+          code: result.rows[0].code,
+          name: result.rows[0].name,
+          tin_number: result.rows[0].tin_number,
+          updated_at: result.rows[0].updated_at
         }
       }
     });
 
   } catch (error) {
-    errorLogger.error('Get school profile failed:', {
+    await transaction.query('ROLLBACK');
+    
+    errorLogger.error('Update TIN failed:', {
       error: error.message,
-      userId: req.user?.userId,
       schoolId: req.user?.schoolId
     });
 
     res.status(500).json({
       status: 'error',
-      message: 'Failed to get school profile'
+      message: 'Failed to update TIN number'
     });
+  } finally {
+    transaction.release();
   }
 };
 
 // ============================================
-// UPDATE SCHOOL BASIC INFO (Authenticated)
+// UPDATE SCHOOL PROFILE (Authenticated)
 // ============================================
 export const updateSchoolProfile = async (req, res) => {
   const transaction = await pool.connect();
@@ -503,10 +474,10 @@ export const updateSchoolProfile = async (req, res) => {
       });
     }
 
-    // Allowed fields for update
+    // Allowed fields for update (TIN is NOT ALLOWED here - use separate endpoint)
     const allowedFields = [
-      'name', 'phone', 'address', 'district', 'region',
-      'country'
+      'name', 'phone', 'address', 'email',
+      'registration_number', 'website'
     ];
 
     // Filter updates
@@ -517,11 +488,70 @@ export const updateSchoolProfile = async (req, res) => {
       }
     });
 
+    // Prevent TIN update through this endpoint
+    if (updates.tin_number) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Please use /api/schools/tin endpoint to update TIN number'
+      });
+    }
+
     if (Object.keys(filteredUpdates).length === 0) {
       return res.status(400).json({
         status: 'error',
         message: 'No valid fields to update'
       });
+    }
+
+    // Validate email if being updated
+    if (filteredUpdates.email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(filteredUpdates.email)) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Invalid email format',
+          field: 'email'
+        });
+      }
+      filteredUpdates.email = filteredUpdates.email.toLowerCase().trim();
+    }
+
+    // Validate phone if being updated
+    if (filteredUpdates.phone) {
+      const phoneRegex = /^(\+255|0)[1-9]\d{8}$/;
+      const cleanPhone = filteredUpdates.phone.replace(/\s/g, '');
+      
+      if (!phoneRegex.test(cleanPhone)) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Invalid phone number format',
+          field: 'phone'
+        });
+      }
+      filteredUpdates.phone = cleanPhone;
+    }
+
+    // Check for duplicates (email or phone)
+    if (filteredUpdates.email || filteredUpdates.phone) {
+      const duplicateCheck = await transaction.query(
+        `SELECT id, name FROM schools 
+         WHERE (email = $1 OR phone = $2) 
+         AND id != $3
+         AND status != 'deleted'`,
+        [
+          filteredUpdates.email || '',
+          filteredUpdates.phone || '',
+          schoolId
+        ]
+      );
+
+      if (duplicateCheck.rows.length > 0) {
+        return res.status(409).json({
+          status: 'error',
+          message: 'Email or phone already registered to another school',
+          school: duplicateCheck.rows[0].name
+        });
+      }
     }
 
     // Build update query
@@ -537,7 +567,9 @@ export const updateSchoolProfile = async (req, res) => {
       `UPDATE schools 
        SET ${setClause}, updated_at = CURRENT_TIMESTAMP
        WHERE id = $${values.length} AND status = 'active'
-       RETURNING id, code, name, email, phone, updated_at`,
+       RETURNING id, code, name, email, phone, address, 
+                 registration_number, website, tin_number,
+                 updated_at`,
       values
     );
 
@@ -547,6 +579,18 @@ export const updateSchoolProfile = async (req, res) => {
         status: 'error',
         message: 'School not found or inactive'
       });
+    }
+
+    // Update settings if district/region changed
+    if (updates.district || updates.region) {
+      if (updates.district) {
+        await updateSchoolSetting(transaction, schoolId, 
+          'general', 'school_district', updates.district);
+      }
+      if (updates.region) {
+        await updateSchoolSetting(transaction, schoolId, 
+          'general', 'school_region', updates.region);
+      }
     }
 
     // Commit
@@ -585,26 +629,34 @@ export const updateSchoolProfile = async (req, res) => {
 };
 
 // ============================================
-// CHECK SCHOOL CODE AVAILABILITY (Public)
+// CHECK TIN AVAILABILITY (Public/Authenticated)
 // ============================================
-export const checkSchoolCode = async (req, res) => {
+export const checkTINAvailability = async (req, res) => {
   try {
-    const { code } = req.query;
+    const { tin } = req.query;
+    const schoolId = req.user?.schoolId; // Optional for logged-in users
     
-    if (!code) {
+    if (!tin) {
       return res.status(400).json({
         status: 'error',
-        message: 'School code is required'
+        message: 'TIN number is required'
       });
     }
 
-    const formattedCode = code.toUpperCase().trim();
+    let query;
+    let params;
     
-    // Check if code exists
-    const result = await pool.query(
-      'SELECT id, name, status FROM schools WHERE code = $1',
-      [formattedCode]
-    );
+    if (schoolId) {
+      // For logged-in users, check if TIN belongs to another school
+      query = 'SELECT id, name, code FROM schools WHERE tin_number = $1 AND id != $2';
+      params = [tin.trim(), schoolId];
+    } else {
+      // Public check - just see if TIN exists
+      query = 'SELECT id, name, code FROM schools WHERE tin_number = $1';
+      params = [tin.trim()];
+    }
+
+    const result = await pool.query(query, params);
 
     const exists = result.rows.length > 0;
     
@@ -615,95 +667,91 @@ export const checkSchoolCode = async (req, res) => {
         exists: exists,
         ...(exists && {
           school: {
+            id: result.rows[0].id,
             name: result.rows[0].name,
-            status: result.rows[0].status
+            code: result.rows[0].code
           }
         })
       }
     });
 
   } catch (error) {
-    errorLogger.error('Check school code failed:', {
+    errorLogger.error('Check TIN availability failed:', {
       error: error.message,
-      code: req.query.code
+      tin: req.query.tin
     });
 
     res.status(500).json({
       status: 'error',
-      message: 'Failed to check school code'
+      message: 'Failed to check TIN availability'
     });
   }
 };
 
 // ============================================
-// RESEND VERIFICATION EMAIL (Public)
+// GET SCHOOL FINANCIAL INFO (Authenticated)
 // ============================================
-export const resendVerificationEmail = async (req, res) => {
+export const getSchoolFinancialInfo = async (req, res) => {
   try {
-    const { email } = req.body;
+    const schoolId = req.user.schoolId;
     
-    if (!email) {
+    if (!schoolId) {
       return res.status(400).json({
         status: 'error',
-        message: 'Email is required'
+        message: 'School ID is required'
       });
     }
 
-    // Check if school exists and is pending
+    // Get TIN and financial settings
     const schoolResult = await pool.query(
-      `SELECT s.*, u.full_name as founder_name 
-       FROM schools s
-       JOIN platform_users u ON s.founder_user_id = u.id
-       WHERE u.email = $1 AND s.status = 'pending'`,
-      [email.toLowerCase()]
+      `SELECT tin_number, registration_number 
+       FROM schools 
+       WHERE id = $1 AND status = 'active'`,
+      [schoolId]
     );
 
     if (schoolResult.rows.length === 0) {
       return res.status(404).json({
         status: 'error',
-        message: 'No pending school registration found for this email'
+        message: 'School not found'
       });
     }
 
-    const school = schoolResult.rows[0];
-
-    // Resend verification email
-    await VerificationService.resendVerificationCode(
-      email,
-      VerificationService.TYPES.FOUNDER_REGISTRATION
+    // Get financial settings
+    const settingsResult = await pool.query(
+      `SELECT setting_key, setting_value 
+       FROM school_settings 
+       WHERE school_id = $1 AND category = 'financial'`,
+      [schoolId]
     );
 
-    authLogger.info('Verification email resent', {
-      schoolId: school.id,
-      email
+    const financialSettings = {};
+    settingsResult.rows.forEach(setting => {
+      financialSettings[setting.setting_key] = setting.setting_value;
     });
 
     res.json({
       status: 'success',
-      message: 'Verification email resent successfully',
       data: {
-        email: email,
-        sent_at: new Date().toISOString()
+        tin_number: schoolResult.rows[0].tin_number,
+        registration_number: schoolResult.rows[0].registration_number,
+        settings: financialSettings,
+        can_generate_receipts: !!schoolResult.rows[0].tin_number,
+        message: schoolResult.rows[0].tin_number ? 
+          'Ready to generate official receipts' :
+          'Add TIN number to enable receipt generation'
       }
     });
 
   } catch (error) {
-    errorLogger.error('Resend verification failed:', {
+    errorLogger.error('Get financial info failed:', {
       error: error.message,
-      email: req.body.email
+      schoolId: req.user?.schoolId
     });
-
-    // Handle rate limiting error
-    if (error.message.includes('Too many attempts')) {
-      return res.status(429).json({
-        status: 'error',
-        message: error.message
-      });
-    }
 
     res.status(500).json({
       status: 'error',
-      message: 'Failed to resend verification email'
+      message: 'Failed to get financial information'
     });
   }
 };
@@ -713,43 +761,90 @@ export const resendVerificationEmail = async (req, res) => {
 // ============================================
 
 // Create default school settings
-async function createDefaultSchoolSettings(connection, schoolId) {
+async function createDefaultSchoolSettings(connection, schoolId, schoolData) {
   const defaultSettings = [
+    // School details from registration
+    ['general', 'school_district', schoolData.district || '', 'string'],
+    ['general', 'school_region', schoolData.region || '', 'string'],
+    ['general', 'school_type', schoolData.type || 'primary', 'string'],
+    ['general', 'school_website', schoolData.website || '', 'string'],
+    
+    // Save TIN in settings too (if provided)
+    ['financial', 'tin_number', schoolData.tin_number || '', 'string'],
+    
     // Academic defaults
-    ['academic', 'language', 'sw', 'string'],
-    ['academic', 'grading_scale', 'A-F', 'string'],
+    ['academic', 'current_term', '1', 'number'],
+    ['academic', 'current_year', new Date().getFullYear().toString(), 'string'],
+    ['academic', 'max_classes', '12', 'number'],
     
     // Financial defaults
-    ['financial', 'currency', 'TZS', 'string'],
-    ['financial', 'payment_methods', '["mpesa", "bank", "cash"]', 'json'],
+    ['financial', 'default_currency', 'TZS', 'string'],
+    ['financial', 'receipt_prefix', 'SCH', 'string'],
+    ['financial', 'receipt_counter', '1', 'number'],
+    ['financial', 'payment_deadline_days', '30', 'number'],
     
     // Communication defaults
-    ['communication', 'sms_enabled', 'true', 'boolean'],
-    ['communication', 'email_enabled', 'true', 'boolean'],
+    ['communication', 'sms_notifications', 'true', 'boolean'],
+    ['communication', 'email_notifications', 'true', 'boolean'],
     
     // System defaults
     ['system', 'timezone', 'Africa/Dar_es_Salaam', 'string'],
-    ['system', 'date_format', 'DD/MM/YYYY', 'string']
+    ['system', 'date_format', 'DD/MM/YYYY', 'string'],
+    ['system', 'language', 'sw', 'string']
   ];
 
   for (const [category, key, value, type] of defaultSettings) {
     await connection.query(
       `INSERT INTO school_settings 
        (school_id, category, setting_key, setting_value, setting_type)
-       VALUES ($1, $2, $3, $4, $5)`,
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (school_id, setting_key) DO NOTHING`,
       [schoolId, category, key, value, type]
     );
   }
 }
 
+// Update a single school setting
+async function updateSchoolSetting(connection, schoolId, category, key, value) {
+  const settingType = typeof value === 'boolean' ? 'boolean' :
+                     typeof value === 'number' ? 'number' :
+                     typeof value === 'object' ? 'json' : 'string';
+  
+  const settingValue = settingType === 'json' ? 
+                      JSON.stringify(value) : String(value);
+
+  await connection.query(
+    `INSERT INTO school_settings 
+     (school_id, category, setting_key, setting_value, setting_type, updated_at)
+     VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+     ON CONFLICT (school_id, setting_key) 
+     DO UPDATE SET 
+       setting_value = EXCLUDED.setting_value,
+       updated_at = EXCLUDED.updated_at`,
+    [schoolId, category, key, settingValue, settingType]
+  );
+}
+
 // ============================================
-// EXPORT CONTROLLERS
+// EXPORT ALL CONTROLLERS
 // ============================================
 export default {
+  // Registration & Verification
   registerSchool,
   verifyFounderEmail,
+  checkSchoolCode,
+  
+  // Profile Management
   getSchoolProfile,
   updateSchoolProfile,
-  checkSchoolCode,
-  resendVerificationEmail
+  updateSchoolSettings,
+  updateAcademicProfile,
+  
+  // Financial/TIN Management
+  updateSchoolTIN,
+  checkTINAvailability,
+  getSchoolFinancialInfo,
+  
+  // Subscription
+  getSchoolSubscription
 };
