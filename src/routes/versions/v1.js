@@ -10,14 +10,21 @@ import {
   checkTINAvailability,
   getSchoolFinancialInfo
 } from '../../v1/controllers/schools/index.js';
+
+import { 
+  registerUser,
+  verifyUserEmail,
+
+} from '../../v1/controllers/schools/index.js';
 import { authenticate } from '../../shared/middleware/auth.js';
 
 const router = express.Router();
 
 // ========== SCHOOL REGISTRATION ROUTES ==========
-router.post('/schools/register', registerSchool);
-router.post('/schools/verify', verifyFounderEmail);
+router.post('/authController/register', registerUser);
+router.post('/auth/verify', verifyUserEmail);
 
+/*
 // ========== SCHOOL PROFILE ROUTES ==========
 router.get('/schools/profile', authenticate, getSchoolProfile);
 router.put('/schools/profile', authenticate, updateSchoolProfile);
@@ -25,6 +32,7 @@ router.get('/schools/details', authenticate, (req, res) => {
   // Optional: if schoolDetails.js has more functions
   res.json({ status: 'success', message: 'School details endpoint' });
 });
+
 
 // ========== SCHOOL SETTINGS ROUTES ==========
 router.get('/schools/settings', authenticate, (req, res) => {
@@ -51,7 +59,7 @@ router.post('/auth/refresh', (req, res) => {
 router.post('/auth/logout', authenticate, (req, res) => {
   res.json({ status: 'success', message: 'Logout successful' });
 });
-
+*/
 // ========== V1 INFO ENDPOINT ==========
 router.get('/', (req, res) => {
   res.json({
