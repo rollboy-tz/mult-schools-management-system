@@ -1,4 +1,4 @@
-src/v1/controllers/auth/index.js
+// src/v1/controllers/auth/index.js
 
 import * as userRegistration from './userRegistration.js'
 import * as teacherConnection from './teacherConnection.js'
