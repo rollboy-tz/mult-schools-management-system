@@ -15,7 +15,7 @@ import {
   registerUser,
   verifyUserEmail,
 
-} from '../../v1/controllers/schools/index.js';
+} from '../../v1/controllers/auth/index.js';
 import { authenticate } from '../../shared/middleware/auth.js';
 
 const router = express.Router();
