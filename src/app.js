@@ -12,7 +12,7 @@ app.use((req, res, next) => {
   console.log(`🔍 [${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
   console.log(`   ↳ Headers:`, req.headers['user-agent']);
   console.log(`   ↳ Query:`, req.query);
-  console.log(`   ↳ Body keys:`, Object.keys(req.body));
+  console.log(' Body keys:', Object.keys(req.body || {}));
   next();
 });
 
