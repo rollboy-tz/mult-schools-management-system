@@ -1,5 +1,6 @@
 // Should have:
 export const registerSchool = async (req, res) => {
+  console.log(req.body);
   // Registration logic
 };
 
