@@ -20,7 +20,7 @@ app.use(securityMiddleware); // All security in one place
 
 // ========== PERFORMANCE MIDDLEWARE ==========
 app.use(compression());
-
+app.use(express.json());
 // ========== ERROR HANDLING SETUP ==========
 process.on('uncaughtException', (error) => {
   console.error('UNCAUGHT EXCEPTION:', error);
