@@ -7,7 +7,6 @@ import { securityMiddleware } from './config/security.js';
 // Initialize app
 const app = express();
 
-// app.js - Add at the TOP, before all middleware
 app.use((req, res, next) => {
   console.log(`🔍 [${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
   console.log(`   ↳ Headers:`, req.headers['user-agent']);
