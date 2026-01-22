@@ -12,7 +12,7 @@ import {
 } from '../../v1/controllers/schools/index.js';
 
 import { 
-  registerUser,
+  userRegister,
   verifyUserEmail,
 
 } from '../../v1/controllers/auth/index.js';
@@ -21,7 +21,7 @@ import { authenticate } from '../../shared/middleware/auth.js';
 const router = express.Router();
 
 // ========== SCHOOL REGISTRATION ROUTES ==========
-router.post('/authController/register', registerUser);
+router.post('/authController/register', userRegister);
 router.post('/auth/verify', verifyUserEmail);
 
 /*
