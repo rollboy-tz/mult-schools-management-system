@@ -21,7 +21,7 @@ import { authenticate } from '../../shared/middleware/auth.js';
 const router = express.Router();
 
 // ========== SCHOOL REGISTRATION ROUTES ==========
-router.post('/authController/register', userRegister);
+router.post('/auth/register', userRegister);
 router.post('/auth/verify', verifyUserEmail);
 
 /*
