@@ -1,11 +1,12 @@
 // routes/index.js - SINGLE ENTRY POINT
 import express from 'express';
 import healthRoutes from './health.js';
+import { validate404 } from '../middleware/validate404.js';
 import v1Routes from './versions/v1.js';
 // import v2Routes from './versions/v2.js'; This will be used for next API version
 
 const router = express.Router();
-
+const v404 = validate404();
 // Trace ALL incoming requests
 router.use((req, res, next) => {
   console.log(`📦 ROUTES INDEX: Received ${req.method} ${req.originalUrl}`);
@@ -14,17 +15,21 @@ router.use((req, res, next) => {
 });
 
 // ========== PUBLIC HEALTH ==========
+v404.track('/health')
 router.use('/health', healthRoutes);
 
 // ========== API VERSIONS ==========
+
+v404.track('/api/v1')
 router.use('/api/v1', v1Routes);
-// router.use('/api/v2', v2Routes); This will be used for next API version
 
 // ========== VERSION REDIRECTS ==========
+v404.track('/api')
 router.get('/api', (req, res) => {
   res.redirect('/api/v1');
 });
 
+v404.track('/api/version')
 router.get('/api/version', (req, res) => {
   res.json({
     current: 'v1 Beta',
@@ -36,6 +41,7 @@ router.get('/api/version', (req, res) => {
 });
 
 // ========== ROOT INFO ==========
+v404.track('/')
 router.get('/', (req, res) => {
   res.json({
     service: 'School Management API',
@@ -51,4 +57,5 @@ router.get('/', (req, res) => {
   });
 });
 
+router.use(v404.handler);
 export default router;

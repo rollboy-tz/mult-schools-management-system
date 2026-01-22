@@ -1,5 +1,10 @@
 // src/routes/versions/v1.js - V1 ROUTES WITH MULTIPLE CONTROLLERS
 import express from 'express';
+import { validate404 } from '../../middleware/validate404.js';
+const v404 = validate404()
+
+
+
 import { 
   registerSchool,
   verifyFounderEmail,
@@ -17,10 +22,12 @@ import {
 
 } from '../../v1/controllers/auth/index.js';
 import { authenticate } from '../../shared/middleware/auth.js';
+import { validate404 } from '../../middleware/validate404.js';
 
 const router = express.Router();
 
 // ========== SCHOOL USER ROUTES ==========
+v404.track('/auth');
 router.post('/auth/register', userRegister);
 router.post('/auth/verify', verifyUserEmail);
 
@@ -91,5 +98,8 @@ router.get('/', (req, res) => {
     docs: process.env.API_DOCS_URL ? `${process.env.API_DOCS_URL}/v1` : null
   });
 });
+
+
+router.use(v404.handler)
 
 export default router;

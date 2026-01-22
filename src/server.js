@@ -1,11 +1,16 @@
 // server.js - STABLE ENTRY POINT
 import app from './app.js';
 import mainRouter from './routes/index.js'; // SINGLE ENTRY POINT
-import { validate404 } from './shared/middleware/validation.js';
+import { validate404 } from './middleware/validate404.js';
+const v404 = validate404();
+
 
 // Attach ALL routes through single entry
+v404.track('/')
 app.use('/', mainRouter);
-app.use('*', validate404);
+app.use(v404.handler)
+
+
 // Start server
 const PORT = process.env.PORT || 3000;
 const API_URL = process.env.API_URL 
