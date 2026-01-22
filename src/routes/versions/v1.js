@@ -16,14 +16,17 @@ import {
   getSchoolFinancialInfo
 } from '../../v1/controllers/schools/index.js';
 
+
+// import auth functions
 import { 
   userRegister,
   verifyUserEmail,
 
 } from '../../v1/controllers/auth/index.js';
 import { authenticate } from '../../shared/middleware/auth.js';
-import { validate404 } from '../../middleware/validate404.js';
 
+
+// Initialize router
 const router = express.Router();
 
 // ========== SCHOOL USER ROUTES ==========
@@ -39,34 +42,8 @@ router.get('/schools/details', authenticate, (req, res) => {
   // Optional: if schoolDetails.js has more functions
   res.json({ status: 'success', message: 'School details endpoint' });
 });
-
-
-// ========== SCHOOL SETTINGS ROUTES ==========
-router.get('/schools/settings', authenticate, (req, res) => {
-  // Placeholder for getSchoolSettings
-  res.json({ status: 'success', message: 'Get school settings' });
-});
-
-router.put('/schools/settings', authenticate, updateSchoolSettings);
-
-// ========== SCHOOL FINANCIAL ROUTES ==========
-router.put('/schools/tin', authenticate, updateSchoolTIN);
-router.get('/schools/check-tin', authenticate, checkTINAvailability);
-router.get('/schools/financial', authenticate, getSchoolFinancialInfo);
-
-// ========== AUTH ROUTES (Placeholders) ==========
-router.post('/auth/login', (req, res) => {
-  res.json({ status: 'success', message: 'Login endpoint - to be implemented' });
-});
-
-router.post('/auth/refresh', (req, res) => {
-  res.json({ status: 'success', message: 'Refresh token - to be implemented' });
-});
-
-router.post('/auth/logout', authenticate, (req, res) => {
-  res.json({ status: 'success', message: 'Logout successful' });
-});
 */
+
 // ========== V1 INFO ENDPOINT ==========
 router.get('/', (req, res) => {
   res.json({
