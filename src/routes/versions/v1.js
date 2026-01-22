@@ -20,7 +20,7 @@ import { authenticate } from '../../shared/middleware/auth.js';
 
 const router = express.Router();
 
-// ========== SCHOOL REGISTRATION ROUTES ==========
+// ========== SCHOOL USER ROUTES ==========
 router.post('/auth/register', userRegister);
 router.post('/auth/verify', verifyUserEmail);
 

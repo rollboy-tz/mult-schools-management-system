@@ -12,4 +12,4 @@ export const verifyTeacherEmail = async (req, res) => {
 
 }
 
-export default { conectTeacher, verifyTeacherEmail }
+export default { connectTeacher, verifyTeacherEmail }
