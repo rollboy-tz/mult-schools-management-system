@@ -4,7 +4,7 @@ import * as userRegistration from './userRegistration.js'
 import * as teacherConnection from './teacherConnection.js'
 import * as parentConnection from './parentConnection.js'
 
-Combine all
+// Combine all
 export const authController = {
     ...userRegistration,
     ...teacherConection,
