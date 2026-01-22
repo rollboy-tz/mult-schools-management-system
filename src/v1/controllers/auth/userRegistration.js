@@ -2,6 +2,7 @@
 
 // =========== USER REGISTRATION =============
 export const userRegister = async (req, res) => {
+    console.log('requests detected')
     console.log(req.body)
 }
 
